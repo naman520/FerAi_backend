@@ -13,14 +13,32 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 
 # Load model in a separate thread to avoid blocking
+import tensorflow as tf
 def load_model_thread():
-    global model
-    try:
-        model = load_model('model_fer2013.h5')
-        logging.info("Model loaded successfully")
-    except Exception as e:
-        logging.error(f"Failed to load model: {str(e)}")
-        raise
+       global model
+       try:
+           # Option 1: Try loading with object_compile set to False
+           model = tf.keras.models.load_model('model_fer2013.h5', compile=False)
+           print("Model loaded successfully")
+       except Exception as e:
+           print(f"Failed to load model with compile=False: {str(e)}")
+           try:
+               # Option 2: Try loading with custom_objects
+               model = tf.keras.models.load_model('model_fer2013.h5', 
+                                                  custom_objects={'InputLayer': tf.keras.layers.InputLayer})
+               print("Model loaded successfully with custom objects")
+           except Exception as e:
+               print(f"Failed to load model with custom objects: {str(e)}")
+               try:
+                   # Option 3: Recreate the model structure
+                   base_model = tf.keras.models.load_model('model_fer2013.h5', compile=False)
+                   inputs = tf.keras.Input(shape=(48, 48, 1))
+                   x = base_model(inputs)
+                   model = tf.keras.Model(inputs, x)
+                   print("Model reconstructed successfully")
+               except Exception as e:
+                   print(f"Failed to reconstruct model: {str(e)}")
+                   raise
 
 threading.Thread(target=load_model_thread).start()
 
