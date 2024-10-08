@@ -18,7 +18,7 @@ def load_model_thread():
        global model
        try:
            # Option 1: Try loading with object_compile set to False
-           model = tf.keras.models.load_model('model_fer2013.h5', compile=False)
+           model = tf.keras.models.load_model('model_fer2013_v2.h5', compile=False)
            print("Model loaded successfully")
        except Exception as e:
            print(f"Failed to load model with compile=False: {str(e)}")
