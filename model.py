@@ -24,8 +24,7 @@ def load_model_thread():
            print(f"Failed to load model with compile=False: {str(e)}")
            try:
                # Option 2: Try loading with custom_objects
-               model = tf.keras.models.load_model('model_fer2013.h5', 
-                                                  custom_objects={'InputLayer': tf.keras.layers.InputLayer})
+               model = tf.keras.models.load_model('model_fer2013.h5', custom_objects={'InputLayer': tf.keras.layers.InputLayer})
                print("Model loaded successfully with custom objects")
            except Exception as e:
                print(f"Failed to load model with custom objects: {str(e)}")
