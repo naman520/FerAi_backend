@@ -100,92 +100,90 @@
     <div id="debug-info"></div>
 
     <script>
-    // Update this URL to match your Render deployment URL
-    // Replace the current API_URL definition
-const API_URL = 'https://ferai-backend.onrender.com'.replace(/\/+$/, '');  // Remove any trailing slashes
+    const API_URL = 'https://ferai-backend.onrender.com'.replace(/\/+$/, '');
+    let isConnected = false;
+    let predictionInterval = null;
 
-// Update the health check function
-/* async function checkBackendConnection() {
-    try {
-        const response = await fetch(`${API_URL}/health`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
+    // Combined initialization function
+    async function initializeSystem() {
+        try {
+            // Initial health check
+            const response = await fetch(`${API_URL}/health`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Health check successful:', data);
+                
+                isConnected = true;
+                statusIndicator.textContent = 'Connected';
+                statusIndicator.className = 'status-indicator status-connected';
+                errorMessage.style.display = 'none';
+                
+                // Start continuous emotion detection
+                predictionInterval = setInterval(detectEmotion, 1000);
+            } else {
+                throw new Error(`Backend responded with status: ${response.status}`);
             }
-        });
-        console.log('Health check response:', response.status);
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Health check data:', data);
-            
-            isConnected = true;
-            statusIndicator.textContent = 'Connected';
-            statusIndicator.className = 'status-indicator status-connected';
-            errorMessage.style.display = 'none';
-            retryCount = 0;
-            return true;
-        } else {
-            throw new Error(`Backend responded with status: ${response.status}`);
+        } catch (error) {
+            console.error('Connection error:', error);
+            isConnected = false;
+            statusIndicator.textContent = 'Disconnected';
+            statusIndicator.className = 'status-indicator status-disconnected';
+            showError(`Cannot connect to the server: ${error.message}`);
         }
-    } catch (error) {
-        console.error('Connection error:', error);
-        isConnected = false;
-        statusIndicator.textContent = 'Disconnected';
-        statusIndicator.className = 'status-indicator status-disconnected';
-        showError(`Cannot connect to the server: ${error.message}`);
-        return false;
     }
-}
- */
 
- 
-// Update the detect emotion function
-async function detectEmotion() {
-    if (!isConnected) {
-        await checkBackendConnection();
+    // Simplified emotion detection function
+    async function detectEmotion() {
         if (!isConnected) {
-            if (retryCount >= MAX_RETRIES) {
-                showError('Connection failed. Please refresh the page.');
-                return;
-            }
-            retryCount++;
+            clearInterval(predictionInterval);
+            showError('Connection lost. Please refresh the page.');
             return;
         }
-    }
 
-    const startTime = performance.now();
-    const canvas = document.createElement('canvas');
-    canvas.width = 48;
-    canvas.height = 48;
-    canvas.getContext('2d').drawImage(video, 0, 0, 48, 48);
-    
-    try {
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-        const formData = new FormData();
-        formData.append('image', blob, 'capture.jpg');
+        const startTime = performance.now();
+        const canvas = document.createElement('canvas');
+        canvas.width = 48;
+        canvas.height = 48;
+        canvas.getContext('2d').drawImage(video, 0, 0, 48, 48);
+        
+        try {
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+            const formData = new FormData();
+            formData.append('image', blob, 'capture.jpg');
 
-        const response = await fetch(`${API_URL}/predict`, {
-            method: 'POST',
-            body: formData
-        });
+            const response = await fetch(`${API_URL}/predict`, {
+                method: 'POST',
+                body: formData
+            });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            updateOverlay(data);
+            updateChart(data);
+            const endTime = performance.now();
+            updateDebugInfo(endTime - startTime);
+            errorMessage.style.display = 'none';
+        } catch (error) {
+            console.error('Error:', error);
+            showError(`Error detecting emotion: ${error.message}`);
+            isConnected = false;
         }
-
-        const data = await response.json();
-        updateOverlay(data);
-        updateChart(data);
-        const endTime = performance.now();
-        updateDebugInfo(endTime - startTime);
-        errorMessage.style.display = 'none';
-    } catch (error) {
-        console.error('Error:', error);
-        showError(`Error detecting emotion: ${error.message}`);
-        isConnected = false;
     }
-}
+
+    function showError(message) {
+        const errorMessage = document.getElementById('error-message');
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+    }
 
     function updateOverlay(data) {
         const topEmotion = Object.entries(data).reduce((a, b) => a[1] > b[1] ? a : b);
@@ -236,13 +234,10 @@ async function detectEmotion() {
         }
     }
 
+    // Initialize when video is ready
     video.addEventListener('loadedmetadata', () => {
-        initChart();
-        checkBackendConnection().then(() => {
-            if (isConnected) {
-                setInterval(detectEmotion, 1000);
-            }
-        });
+        initChart(); // Assuming this function exists in your code
+        initializeSystem();
     });
     </script>
 </body>
