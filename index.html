@@ -105,7 +105,7 @@
 const API_URL = 'https://ferai-backend.onrender.com'.replace(/\/+$/, '');  // Remove any trailing slashes
 
 // Update the health check function
-async function checkBackendConnection() {
+/* async function checkBackendConnection() {
     try {
         const response = await fetch(`${API_URL}/health`, {
             method: 'GET',
@@ -137,7 +137,9 @@ async function checkBackendConnection() {
         return false;
     }
 }
+ */
 
+ 
 // Update the detect emotion function
 async function detectEmotion() {
     if (!isConnected) {
