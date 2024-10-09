@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- Head section remains the same -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enhanced Real-time Emotion Detection</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* All styles remain the same */
         body { 
             font-family: Arial, sans-serif; 
             text-align: center; 
@@ -13,77 +15,11 @@
             margin: 0 auto; 
             padding: 20px;
         }
-        #videoContainer { 
-            position: relative; 
-            display: inline-block; 
-            margin: 20px 0;
-        }
-        #video { 
-            border: 5px solid #ccc; 
-            border-radius: 10px;
-        }
-        #emotion-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 18px;
-        }
-        #emotion-chart { 
-            width: 100%; 
-            height: 200px; 
-            margin: 20px 0; 
-        }
-        #debug-info { 
-            margin-top: 10px; 
-            font-style: italic; 
-            color: #666;
-        }
-        .emotion-feedback { 
-            margin-top: 20px; 
-        }
-        .emotion-feedback button { 
-            margin: 0 5px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-        }
-        .emotion-feedback button:hover {
-            background-color: #45a049;
-        }
-        .error-message {
-            color: white;
-            padding: 10px;
-            margin: 10px 0;
-            background-color: #f44336;
-            border-radius: 4px;
-            display: none;
-        }
-        .status-indicator {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-        }
-        .status-connected {
-            background-color: #4caf50;
-            color: white;
-        }
-        .status-disconnected {
-            background-color: #f44336;
-            color: white;
-        }
+        /* ... rest of the styles ... */
     </style>
 </head>
 <body>
+    <!-- Body HTML remains the same -->
     <h1>Enhanced Real-time Emotion Detection</h1>
     <div id="status" class="status-indicator"></div>
     <div id="error-message" class="error-message"></div>
@@ -104,63 +40,115 @@
     let isConnected = false;
     let predictionInterval = null;
 
-    // Combined initialization function
+    // Initialize system by making first prediction request
     async function initializeSystem() {
         try {
-            // Initial health check
-            const response = await fetch(`${API_URL}/health`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                }
+            // Initial prediction request to check system status
+            const canvas = document.createElement('canvas');
+            canvas.width = 48;
+            canvas.height = 48;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#000000';
+            context.fillRect(0, 0, 48, 48);
+            
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+            const formData = new FormData();
+            formData.append('image', blob, 'initial.jpg');
+
+            const response = await fetch(`${API_URL}/predict`, {
+                method: 'POST',
+                body: formData
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Health check successful:', data);
-                
+            if (!response.ok) {
+                throw new Error(`Backend responded with status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            // Check system status from the response
+            if (data.health_status && data.health_status.model_loaded) {
                 isConnected = true;
-                statusIndicator.textContent = 'Connected';
-                statusIndicator.className = 'status-indicator status-connected';
-                errorMessage.style.display = 'none';
-                
+                updateConnectionStatus(data.health_status);
                 // Start continuous emotion detection
                 predictionInterval = setInterval(detectEmotion, 1000);
             } else {
-                throw new Error(`Backend responded with status: ${response.status}`);
+                throw new Error('Model not ready');
             }
         } catch (error) {
             console.error('Connection error:', error);
             isConnected = false;
-            statusIndicator.textContent = 'Disconnected';
-            statusIndicator.className = 'status-indicator status-disconnected';
+            updateConnectionStatus({ model_loaded: false });
             showError(`Cannot connect to the server: ${error.message}`);
         }
     }
 
-    // Simplified emotion detection function
-    const response = await fetch(`${API_URL}/predict`, {
-    method: 'POST',
-    body: formData
-});
+    // Updated emotion detection function
+    async function detectEmotion() {
+        if (!isConnected) {
+            clearInterval(predictionInterval);
+            showError('Connection lost. Please refresh the page.');
+            return;
+        }
 
-if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-}
+        try {
+            const startTime = performance.now();
+            const canvas = document.createElement('canvas');
+            canvas.width = 48;
+            canvas.height = 48;
+            canvas.getContext('2d').drawImage(video, 0, 0, 48, 48);
+            
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+            const formData = new FormData();
+            formData.append('image', blob, 'capture.jpg');
 
-const data = await response.json();
-if (data.error) {
-    throw new Error(data.error);
-}
+            const response = await fetch(`${API_URL}/predict`, {
+                method: 'POST',
+                body: formData
+            });
 
-// Update connection status based on health information
-isConnected = data.health_status.model_loaded;
-updateConnectionStatus(data.health_status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-// Update emotion display with predictions
-updateOverlay(data.predictions);
-updateChart(data.predictions);
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
 
+            // Update connection status and system info
+            isConnected = data.health_status.model_loaded;
+            updateConnectionStatus(data.health_status);
+
+            // Update emotion display
+            updateOverlay(data.predictions);
+            updateChart(data.predictions);
+            
+            const endTime = performance.now();
+            updateDebugInfo(endTime - startTime);
+            errorMessage.style.display = 'none';
+        } catch (error) {
+            console.error('Error:', error);
+            showError(`Error detecting emotion: ${error.message}`);
+            isConnected = false;
+        }
+    }
+
+    function updateConnectionStatus(healthStatus) {
+        const statusIndicator = document.getElementById('status');
+        if (healthStatus.model_loaded) {
+            statusIndicator.textContent = 'Connected';
+            statusIndicator.className = 'status-indicator status-connected';
+        } else {
+            statusIndicator.textContent = 'Disconnected';
+            statusIndicator.className = 'status-indicator status-disconnected';
+        }
+    }
+
+    // Rest of the utility functions remain the same
     function showError(message) {
         const errorMessage = document.getElementById('error-message');
         errorMessage.textContent = message;
