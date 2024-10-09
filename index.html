@@ -102,7 +102,7 @@
     <script>
     // Update this URL to match your Render deployment URL
     // Replace the current API_URL definition
-const API_URL = 'https://ferai-backend.onrender.com';  // Remove any trailing slashes
+const API_URL = 'https://ferai-backend.onrender.com'.replace(/\/+$/, '');  // Remove any trailing slashes
 
 // Update the health check function
 async function checkBackendConnection() {

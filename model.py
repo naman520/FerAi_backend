@@ -34,7 +34,7 @@ def root():
         'message': 'Emotion Detection API is running'
     })
 
-@app.route('health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
     logging.debug("Health check endpoint called")  # Add debug log
     return jsonify({
