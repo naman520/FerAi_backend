@@ -6,9 +6,22 @@
     <title>Enhanced Real-time Emotion Detection</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; max-width: 800px; margin: 0 auto; }
-        #videoContainer { position: relative; display: inline-block; }
-        #video { border: 5px solid #ccc; }
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        #videoContainer { 
+            position: relative; 
+            display: inline-block; 
+            margin: 20px 0;
+        }
+        #video { 
+            border: 5px solid #ccc; 
+            border-radius: 10px;
+        }
         #emotion-overlay {
             position: absolute;
             top: 10px;
@@ -19,15 +32,36 @@
             border-radius: 5px;
             font-size: 18px;
         }
-        #emotion-chart { width: 100%; height: 200px; margin: 20px 0; }
-        #debug-info { margin-top: 10px; font-style: italic; }
-        .emotion-feedback { margin-top: 10px; }
-        .emotion-feedback button { margin: 0 5px; }
+        #emotion-chart { 
+            width: 100%; 
+            height: 200px; 
+            margin: 20px 0; 
+        }
+        #debug-info { 
+            margin-top: 10px; 
+            font-style: italic; 
+            color: #666;
+        }
+        .emotion-feedback { 
+            margin-top: 20px; 
+        }
+        .emotion-feedback button { 
+            margin: 0 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+        }
+        .emotion-feedback button:hover {
+            background-color: #45a049;
+        }
         .error-message {
-            color: red;
+            color: white;
             padding: 10px;
             margin: 10px 0;
-            background-color: #ffebee;
+            background-color: #f44336;
             border-radius: 4px;
             display: none;
         }
@@ -66,7 +100,7 @@
     <div id="debug-info"></div>
 
     <script>
-    // Replace with your Render backend URL
+    // Update this URL to match your Render deployment URL
     const API_URL = 'https://ferai.onrender.com';
     let isConnected = false;
     let retryCount = 0;
@@ -79,7 +113,6 @@
     const statusIndicator = document.getElementById('status');
     let chart;
 
-    // Check backend connectivity
     async function checkBackendConnection() {
         try {
             const response = await fetch(`${API_URL}/health`);

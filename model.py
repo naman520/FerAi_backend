@@ -12,42 +12,42 @@ app = Flask(__name__)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
 
-# Load model in a separate thread to avoid blocking
-import tensorflow as tf
-def load_model_thread():
-       global model
-       try:
-           # Option 1: Try loading with object_compile set to False
-           model = tf.keras.models.load_model('model_fer2013_v2.h5', compile=False)
-           print("Model loaded successfully")
-       except Exception as e:
-           print(f"Failed to load model with compile=False: {str(e)}")
-           try:
-               # Option 2: Try loading with custom_objects
-               model = tf.keras.models.load_model('model_fer2013.h5', custom_objects={'InputLayer': tf.keras.layers.InputLayer})
-               print("Model loaded successfully with custom objects")
-           except Exception as e:
-               print(f"Failed to load model with custom objects: {str(e)}")
-               try:
-                   # Option 3: Recreate the model structure
-                   base_model = tf.keras.models.load_model('model_fer2013.h5', compile=False)
-                   inputs = tf.keras.Input(shape=(48, 48, 1))
-                   x = base_model(inputs)
-                   model = tf.keras.Model(inputs, x)
-                   print("Model reconstructed successfully")
-               except Exception as e:
-                   print(f"Failed to reconstruct model: {str(e)}")
-                   raise
+# Global variable for the model
+model = None
 
+# Load model in a separate thread
+def load_model_thread():
+    global model
+    try:
+        model = load_model('model_fer2013_v2.h5', compile=False)
+        logging.info("Model loaded successfully")
+    except Exception as e:
+        logging.error(f"Failed to load model: {str(e)}")
+        raise
+
+# Start model loading in background
 threading.Thread(target=load_model_thread).start()
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'model_loaded': model is not None
+    })
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    if model is None:
+        return jsonify({'error': 'Model not yet loaded'}), 503
+        
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+        
     try:
         img_data = request.files['image'].read()
         img = Image.open(io.BytesIO(img_data))
         
-        # Preprocess the image (adjust based on your model's requirements)
+        # Preprocess the image
         img = img.convert('L').resize((48, 48))
         img_array = np.array(img) / 255.0
         img_array = img_array.reshape(1, 48, 48, 1)
@@ -59,6 +59,15 @@ def predict():
         return jsonify(result)
     except Exception as e:
         logging.error(f"Prediction error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/feedback', methods=['POST'])
+def feedback():
+    try:
+        feedback_data = request.json
+        # Here you could store the feedback in a database
+        return jsonify({'status': 'success'})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
