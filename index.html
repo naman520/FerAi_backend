@@ -139,45 +139,27 @@
     }
 
     // Simplified emotion detection function
-    async function detectEmotion() {
-        if (!isConnected) {
-            clearInterval(predictionInterval);
-            showError('Connection lost. Please refresh the page.');
-            return;
-        }
+    const response = await fetch(`${API_URL}/predict`, {
+    method: 'POST',
+    body: formData
+});
 
-        const startTime = performance.now();
-        const canvas = document.createElement('canvas');
-        canvas.width = 48;
-        canvas.height = 48;
-        canvas.getContext('2d').drawImage(video, 0, 0, 48, 48);
-        
-        try {
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-            const formData = new FormData();
-            formData.append('image', blob, 'capture.jpg');
+if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+}
 
-            const response = await fetch(`${API_URL}/predict`, {
-                method: 'POST',
-                body: formData
-            });
+const data = await response.json();
+if (data.error) {
+    throw new Error(data.error);
+}
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+// Update connection status based on health information
+isConnected = data.health_status.model_loaded;
+updateConnectionStatus(data.health_status);
 
-            const data = await response.json();
-            updateOverlay(data);
-            updateChart(data);
-            const endTime = performance.now();
-            updateDebugInfo(endTime - startTime);
-            errorMessage.style.display = 'none';
-        } catch (error) {
-            console.error('Error:', error);
-            showError(`Error detecting emotion: ${error.message}`);
-            isConnected = false;
-        }
-    }
+// Update emotion display with predictions
+updateOverlay(data.predictions);
+updateChart(data.predictions);
 
     function showError(message) {
         const errorMessage = document.getElementById('error-message');
