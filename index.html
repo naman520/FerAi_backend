@@ -101,126 +101,89 @@
 
     <script>
     // Update this URL to match your Render deployment URL
-    const API_URL = 'https://ferai-backend.onrender.com';
-    let isConnected = false;
-    let retryCount = 0;
-    const MAX_RETRIES = 3;
+    // Replace the current API_URL definition
+const API_URL = 'https://ferai-backend.onrender.com'.replace(/\/+$/, '');  // Remove any trailing slashes
 
-    const video = document.getElementById('video');
-    const overlay = document.getElementById('emotion-overlay');
-    const debugInfo = document.getElementById('debug-info');
-    const errorMessage = document.getElementById('error-message');
-    const statusIndicator = document.getElementById('status');
-    let chart;
-
-    async function checkBackendConnection() {
-        try {
-            const response = await fetch(`${API_URL}/health`);
-            if (response.ok) {
-                isConnected = true;
-                statusIndicator.textContent = 'Connected';
-                statusIndicator.className = 'status-indicator status-connected';
-                errorMessage.style.display = 'none';
-                retryCount = 0;
-            } else {
-                throw new Error('Backend health check failed');
-            }
-        } catch (error) {
-            isConnected = false;
-            statusIndicator.textContent = 'Disconnected';
-            statusIndicator.className = 'status-indicator status-disconnected';
-            showError('Cannot connect to the server. Retrying...');
-        }
-    }
-
-    function showError(message) {
-        errorMessage.textContent = message;
-        errorMessage.style.display = 'block';
-    }
-
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-            video.srcObject = stream;
-        })
-        .catch(err => showError("Error accessing the camera: " + err.message));
-
-    function initChart() {
-        const ctx = document.getElementById('emotion-chart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral'],
-                datasets: [{
-                    label: 'Emotion Probability',
-                    data: [0, 0, 0, 0, 0, 0, 0],
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.6)',
-                        'rgba(75, 192, 192, 0.6)',
-                        'rgba(255, 206, 86, 0.6)',
-                        'rgba(54, 162, 235, 0.6)',
-                        'rgba(153, 102, 255, 0.6)',
-                        'rgba(255, 159, 64, 0.6)',
-                        'rgba(199, 199, 199, 0.6)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 1
-                    }
-                }
+// Update the health check function
+async function checkBackendConnection() {
+    try {
+        const response = await fetch(`${API_URL}/health`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
             }
         });
+        console.log('Health check response:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Health check data:', data);
+            
+            isConnected = true;
+            statusIndicator.textContent = 'Connected';
+            statusIndicator.className = 'status-indicator status-connected';
+            errorMessage.style.display = 'none';
+            retryCount = 0;
+            return true;
+        } else {
+            throw new Error(`Backend responded with status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Connection error:', error);
+        isConnected = false;
+        statusIndicator.textContent = 'Disconnected';
+        statusIndicator.className = 'status-indicator status-disconnected';
+        showError(`Cannot connect to the server: ${error.message}`);
+        return false;
     }
+}
 
-    async function detectEmotion() {
+// Update the detect emotion function
+async function detectEmotion() {
+    if (!isConnected) {
+        await checkBackendConnection();
         if (!isConnected) {
-            await checkBackendConnection();
-            if (!isConnected) {
-                if (retryCount >= MAX_RETRIES) {
-                    showError('Connection failed. Please refresh the page.');
-                    return;
-                }
-                retryCount++;
+            if (retryCount >= MAX_RETRIES) {
+                showError('Connection failed. Please refresh the page.');
                 return;
             }
-        }
-
-        const startTime = performance.now();
-        const canvas = document.createElement('canvas');
-        canvas.width = 48;
-        canvas.height = 48;
-        canvas.getContext('2d').drawImage(video, 0, 0, 48, 48);
-        
-        try {
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-            const formData = new FormData();
-            formData.append('image', blob, 'capture.jpg');
-
-            const response = await fetch(`${API_URL}/predict`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            updateOverlay(data);
-            updateChart(data);
-            const endTime = performance.now();
-            updateDebugInfo(endTime - startTime);
-            errorMessage.style.display = 'none';
-        } catch (error) {
-            console.error('Error:', error);
-            showError(`Error detecting emotion: ${error.message}`);
-            isConnected = false;
+            retryCount++;
+            return;
         }
     }
+
+    const startTime = performance.now();
+    const canvas = document.createElement('canvas');
+    canvas.width = 48;
+    canvas.height = 48;
+    canvas.getContext('2d').drawImage(video, 0, 0, 48, 48);
+    
+    try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+        const formData = new FormData();
+        formData.append('image', blob, 'capture.jpg');
+
+        const response = await fetch(`${API_URL}/predict`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        updateOverlay(data);
+        updateChart(data);
+        const endTime = performance.now();
+        updateDebugInfo(endTime - startTime);
+        errorMessage.style.display = 'none';
+    } catch (error) {
+        console.error('Error:', error);
+        showError(`Error detecting emotion: ${error.message}`);
+        isConnected = false;
+    }
+}
 
     function updateOverlay(data) {
         const topEmotion = Object.entries(data).reduce((a, b) => a[1] > b[1] ? a : b);

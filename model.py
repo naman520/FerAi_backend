@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -9,8 +9,8 @@ import threading
 import os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # Configure CORS properly
-logging.basicConfig(level=logging.INFO)
+CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
+logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more detailed logs
 
 # Global variable for the model
 model = None
@@ -27,12 +27,16 @@ def load_model_thread():
 # Start model loading in background
 threading.Thread(target=load_model_thread).start()
 
-@app.route('/')
-def home():
-    return jsonify({"status": "server is running"})
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        'status': 'ok',
+        'message': 'Emotion Detection API is running'
+    })
 
-@app.route('/health')
+@app.route('/health', methods=['GET'])
 def health_check():
+    logging.debug("Health check endpoint called")  # Add debug log
     return jsonify({
         'status': 'healthy',
         'model_loaded': model is not None
@@ -40,6 +44,7 @@ def health_check():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    logging.debug("Predict endpoint called")  # Add debug log
     if model is None:
         return jsonify({'error': 'Model not yet loaded'}), 503
         
