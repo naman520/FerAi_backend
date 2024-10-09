@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import numpy as np
 from tensorflow.keras.models import load_model
@@ -28,7 +28,12 @@ def load_model_thread():
 # Start model loading in background
 threading.Thread(target=load_model_thread).start()
 
-@app.route('/health', methods=['GET'])
+# Serve static files
+@app.route('/')
+def serve_index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/health')
 def health_check():
     return jsonify({
         'status': 'healthy',
@@ -71,5 +76,6 @@ def feedback():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    # Use the port provided by Render
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, threaded=True)
