@@ -27,7 +27,7 @@ def load_model_thread():
 # Start model loading in background
 threading.Thread(target=load_model_thread).start()
 
-""" @app.route('/', methods=['GET'])
+@app.route('/', methods=['GET'])
 def root():
     return jsonify({
         'status': 'ok',
@@ -40,9 +40,9 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'model_loaded': model is not None
-    }) """
+    })
 
-@app.route('/', methods=['POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
     logging.debug("Predict endpoint called")  # Add debug log
     if model is None:

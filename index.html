@@ -163,7 +163,7 @@ async function detectEmotion() {
         const formData = new FormData();
         formData.append('image', blob, 'capture.jpg');
 
-        const response = await fetch(`${API_URL}/`, {
+        const response = await fetch(`${API_URL}/predict`, {
             method: 'POST',
             body: formData
         });
