@@ -9,7 +9,7 @@ import threading
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})  # Configure CORS properly
 logging.basicConfig(level=logging.INFO)
 
 # Global variable for the model
@@ -23,15 +23,13 @@ def load_model_thread():
         logging.info("Model loaded successfully")
     except Exception as e:
         logging.error(f"Failed to load model: {str(e)}")
-        raise
 
 # Start model loading in background
 threading.Thread(target=load_model_thread).start()
 
-# Serve static files
 @app.route('/')
-def serve_index():
-    return send_from_directory('.', 'index.html')
+def home():
+    return jsonify({"status": "server is running"})
 
 @app.route('/health')
 def health_check():
@@ -66,16 +64,6 @@ def predict():
         logging.error(f"Prediction error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/feedback', methods=['POST'])
-def feedback():
-    try:
-        feedback_data = request.json
-        # Here you could store the feedback in a database
-        return jsonify({'status': 'success'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 if __name__ == '__main__':
-    # Use the port provided by Render
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port, threaded=True)
+    app.run(host='0.0.0.0', port=port, debug=True)
