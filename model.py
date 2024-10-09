@@ -9,7 +9,7 @@ import threading
 import os
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
+CORS(app, resources={r"*": {"origins": "*"}}, support_credentials=True)
 logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for more detailed logs
 
 # Global variable for the model
