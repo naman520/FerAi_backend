@@ -107,7 +107,7 @@ const API_URL = 'https://ferai-backend.onrender.com'.replace(/\/+$/, '');  // Re
 // Update the health check function
 async function checkBackendConnection() {
     try {
-        const response = await fetch(`${API_URL}/health`, {
+        const response = await fetch(`${API_URL}health`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
